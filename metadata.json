@@ -1,0 +1,6 @@
+{
+  "name": "Endless Runner",
+  "description": "An advanced Endless Runner web game with a robust C++ game loop compiled to WebAssembly, featuring advanced active buffs/debuffs simulation and dynamic vector canvas rendering.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
