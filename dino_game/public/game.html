@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WASM Endless Runner Core Game Interface</title>
+    <!-- Use Tailwind CSS CDN inside the isolated canvas index page -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            image-rendering: pixelated;
+        }
+        @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&display=swap');
+        .custom-font {
+            font-family: 'JetBrains Mono', monospace;
+        }
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background-color: #334155;
+            border-radius: 4px;
+        }
+        .custom-scrollbar {
+            scrollbar-width: thin;
+            scrollbar-color: #334155 transparent;
+        }
+    </style>
+</head>
+<body class="bg-[#0b0d19] text-gray-100 flex flex-col justify-center items-center h-screen max-w-full m-0 p-0 sm:p-4 custom-font overflow-hidden">
+
+    <!-- Primary Game Screen Container -->
+    <div class="relative w-full h-full sm:h-auto max-w-[1020px] bg-[#121624] sm:border-2 border-slate-700/60 sm:rounded-xl overflow-hidden shadow-2xl p-2 sm:p-3 flex flex-col gap-2 sm:gap-3">
+        
+        <!-- Retro Header Ribbon -->
+        <div class="flex flex-wrap items-center justify-between border-b border-slate-700/50 pb-2 px-1 text-xs">
+            <div class="flex items-center gap-2">
+                <span class="flex h-2.5 w-2.5 relative">
+                    <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                    <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
+                </span>
+                <span class="font-bold uppercase tracking-wider text-slate-400">WASM Droid Engine v1.0.4</span>
+            </div>
+            <div class="flex gap-4 text-slate-400">
+                <div>SCORE RATIO: <span class="text-teal-400 font-bold">1:1 (X2 ACTIVE)</span></div>
+                <div>PHYSICS REFRESH: <span class="text-indigo-400 font-bold">60HZ (FLAT)</span></div>
+            </div>
+        </div>
+
+        <!-- Dashboard Gauges -->
+        <div class="grid grid-cols-3 gap-1 sm:gap-3">
+            <div class="bg-[#1a2035]/60 border border-slate-700/40 p-1.5 sm:p-2.5 rounded-lg flex flex-col items-center">
+                <span class="text-[8px] sm:text-[10px] text-slate-400 uppercase tracking-widest font-semibold text-center leading-tight">Current Score</span>
+                <span class="text-lg sm:text-2xl font-bold text-teal-400 leading-none mt-1" id="hud-score">0</span>
+            </div>
+            <div class="bg-[#1a2035]/60 border border-slate-700/40 p-1.5 sm:p-2.5 rounded-lg flex flex-col items-center">
+                <span class="text-[8px] sm:text-[10px] text-slate-400 uppercase tracking-widest font-semibold text-center leading-tight">Distance Traveled</span>
+                <span class="text-lg sm:text-2xl font-bold text-indigo-400 leading-none mt-1" id="hud-distance">0m</span>
+            </div>
+            <div class="bg-[#1a2035]/60 border border-slate-700/40 p-1.5 sm:p-2.5 rounded-lg flex flex-col items-center">
+                <span class="text-[8px] sm:text-[10px] text-slate-400 uppercase tracking-widest font-semibold text-center leading-tight">Engine Speed</span>
+                <span class="text-lg sm:text-2xl font-bold text-amber-500 leading-none mt-1" id="hud-speed">0 u/s</span>
+            </div>
+        </div>
+
+        <!-- Interlocking Grid Main stage -->
+        <div class="relative bg-slate-950 sm:rounded-lg overflow-hidden border-y sm:border border-slate-800 flex-grow min-h-0 w-full flex items-center justify-center" id="canvas-container">
+            <canvas id="game-canvas" class="cursor-pointer bg-slate-950 block max-w-full max-h-full"></canvas>
+
+            <!-- Main Menu overlay dialog -->
+            <div id="modal-menu" class="absolute inset-0 bg-slate-950/90 flex flex-col items-center justify-center p-6 z-20">
+                <span class="text-blue-500 text-[10px] bg-blue-500/10 border border-blue-500/25 px-2.5 py-1 rounded-full uppercase tracking-widest mb-1 font-bold animate-pulse">System Ready</span>
+                <h2 class="text-2xl sm:text-3xl font-bold text-teal-400 tracking-tight mb-2 text-center">ENDLESS RUNNER</h2>
+                <div class="bg-[#141829] border border-slate-800 p-4 rounded-lg mb-6 text-sm flex flex-col items-center">
+                    <span class="block text-[10px] uppercase text-slate-500">Highest Score</span>
+                    <span class="text-2xl font-bold text-amber-500" id="menu-highscore">0</span>
+                </div>
+                <button id="start-btn" onclick="window.gameInstance.startGame();" class="px-6 py-2.5 bg-blue-500 hover:bg-blue-400 text-white font-bold rounded-md transition text-xs uppercase tracking-wider flex items-center gap-2 cursor-pointer">
+                    Start Game
+                </button>
+            </div>
+
+            <!-- Game Over overlay dialog -->
+            <div id="modal-gameover" class="absolute inset-0 bg-slate-950/90 flex flex-col items-center justify-center p-6 hidden z-10">
+                <h2 class="text-3xl sm:text-4xl font-bold text-red-500 tracking-tight mb-4 text-center">GAME OVER</h2>
+                
+                <div class="bg-[#141829] border border-slate-800 p-4 rounded-lg flex flex-col items-center mb-6 text-sm">
+                    <span class="block text-[10px] uppercase text-slate-500">Record Score</span>
+                    <span class="text-2xl font-bold text-teal-400" id="overscore">0</span>
+                </div>
+
+                <div class="text-slate-300 font-medium tracking-tight mb-6">Press <span class="bg-[#242b47] px-2 py-1 rounded text-white border border-slate-700 text-sm font-mono font-bold">R</span> to Restart</div>
+
+                <button onclick="window.gameInstance.startGame();" class="px-8 py-3 bg-emerald-500 hover:bg-emerald-400 text-[#0c0e15] font-bold rounded-md transition text-sm uppercase tracking-wider flex items-center gap-2 cursor-pointer">
+                    Restart
+                </button>
+            </div>
+        </div>
+
+        <!-- Active Buffs & Debuffs Indicator Drawer -->
+        <div class="bg-[#1a2035]/30 border border-slate-800 rounded-lg p-1.5 sm:p-2.5">
+            <span class="block text-[10px] text-slate-400 uppercase tracking-widest font-semibold mb-2">Active Effector States (WASM Bitmask Sync)</span>
+            <div id="indicators-grid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 overflow-y-auto max-h-[50px] sm:max-h-[80px] custom-scrollbar">
+                <!-- Dynamically populated index items from game_ui.js -->
+            </div>
+        </div>
+
+        <!-- Keybindings Cheat sheet Footer -->
+        <div class="flex justify-between items-center text-[10px] text-slate-500 px-1 border-t border-slate-800/40 pt-1 pb-1 leading-relaxed">
+            <div class="flex gap-4">
+                <span class="hidden sm:inline">[SPACE / W] Jump (Double/Flappy supported)</span>
+                <span class="hidden sm:inline">[DOWN / S] Duck / Slither</span>
+                <span class="hidden sm:inline">[R] Reset level</span>
+            </div>
+            <div class="text-center w-full sm:w-auto font-bold text-slate-400 flex flex-col sm:flex-row gap-0 sm:gap-2">
+                <span>Tap/Touch Left Side = JUMP</span>
+                <span class="hidden sm:inline">•</span>
+                <span>Right Side = DUCK</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Initialization Scripts -->
+    <script src="game_ui.js"></script>
+    <script>
+        // Start the game viewport on content loads
+        window.addEventListener('DOMContentLoaded', () => {
+            window.gameInstance = new window.GameViewport('game-canvas');
+        });
+    </script>
+</body>
+</html>
